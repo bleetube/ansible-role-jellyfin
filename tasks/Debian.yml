@@ -1,0 +1,26 @@
+---
+# https://www.jeffgeerling.com/blog/2022/aptkey-deprecated-debianubuntu-how-fix-ansible
+- name: Add jellyfin apt repository key.
+  ansible.builtin.get_url:
+    url: "{{ jellyfin_repo_key_url }}"
+    dest: /usr/share/keyrings/jellyfin.asc
+    mode: '0644'
+
+- name: Ensure the repository is added with the relevant trusted GPG key
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list.d/jellyfin.list
+    regexp: 'repo.jellyfin.org'
+    line: "deb [arch=amd64 signed-by=/usr/share/keyrings/jellyfin.asc] https://repo.jellyfin.org/{{ ansible_facts.lsb.id | lower }} {{ ansible_distribution_release }} main"
+    create: true
+  register: jellyfin_repo
+
+- name: Update the apt repository cache
+  ansible.builtin.apt:
+    update_cache: yes
+  when: jellyfin_repo.changed
+
+- name: Install the jellyfin package
+  ansible.builtin.apt:
+    name: jellyfin
+    state: latest
+
